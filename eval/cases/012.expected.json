@@ -15,6 +15,24 @@
       "file": "api/stock.py",
       "severity": "high",
       "note": "qty 未校验正负，传负数等于反向加库存"
+    },
+    {
+      "type": "none-check",
+      "file": "api/stock.py",
+      "severity": "major",
+      "note": "sku 不存在时 row 为 None，row[0] 抛 TypeError（stock.py:+18）"
+    },
+    {
+      "type": "resource-leak",
+      "file": "api/stock.py",
+      "severity": "medium",
+      "note": "conn 异常时未关闭也未 rollback（stock.py:+16）"
+    },
+    {
+      "type": "broken-access-control",
+      "file": "api/stock.py",
+      "severity": "high",
+      "note": "扣减库存接口无任何鉴权，任意调用方可改库存（stock.py:+14）"
     }
   ]
 }

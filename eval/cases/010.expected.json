@@ -15,6 +15,18 @@
       "file": "api/feed.py",
       "severity": "medium",
       "note": "page 未做范围校验，传负数或超大值会得到异常 offset"
+    },
+    {
+      "type": "logic-error",
+      "file": "api/feed.py",
+      "severity": "major",
+      "note": "offset 用 page * 20，page=1 时跳过前 20 条（feed.py:+17）"
+    },
+    {
+      "type": "none-check",
+      "file": "api/feed.py",
+      "severity": "suggestion",
+      "note": "author 可能为 None，author.name 抛 AttributeError（feed.py:+22）"
     }
   ]
 }

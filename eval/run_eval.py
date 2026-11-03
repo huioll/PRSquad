@@ -59,6 +59,8 @@ TAXONOMY: dict[str, list[Alias]] = {
     "sql-injection": [
         "sql注入", "sql 注入", "sql-injection", "sql injection",
         "拼接 sql", "拼接sql", "拼进 sql", "sql 语句拼接", "注入点",
+        # 复核 017 时补的：模型只提到 ORDER BY 子句被拼接
+        "order by", "拼进 order by",
     ],
     "command-injection": [
         "命令注入", "command injection", "command-injection",
@@ -67,6 +69,8 @@ TAXONOMY: dict[str, list[Alias]] = {
     "hardcoded-secret": [
         "硬编码", "hardcoded", "hard-code", "写死", "明文密码", "明文密钥",
         "凭据", "密钥泄露",
+        # 复核 003 时补的：模型说的是「命令行中包含明文口令」
+        "明文口令",
     ],
     "weak-hash": ["md5", "sha1", "弱哈希", "弱加密", "不安全哈希", "哈希算法"],
     "weak-random": [
@@ -99,6 +103,8 @@ TAXONOMY: dict[str, list[Alias]] = {
         "putconn", "连接池耗尽", "抽干", "泄漏",
         # 复核 015 时补的：模型说的是「连接不会归还」
         "归还", "耗尽",
+        # 复核 015 时补的第二种写法：「cursor 不会被关闭」
+        "不会被关闭",
     ],
     "n-plus-one": [
         "n+1", ("循环", "查询"), ("逐条", "查询"), "批量查询", "懒加载",
@@ -111,12 +117,15 @@ TAXONOMY: dict[str, list[Alias]] = {
     "broken-access-control": [
         "越权", "idor", "未校验归属", "未校验是否属于", "任意用户",
         "水平权限", ("owner", "校验"), ("归属", "校验"), "未校验权限",
+        # 复核 005 时补的：模型说「没有任何鉴权，任意调用者都能枚举」
+        "鉴权", "任意调用者",
     ],
     "auth-bypass": [
         "认证绕过", "绕过认证", "跳过校验", "token 为空", "token为空",
         "未校验凭证", "不校验令牌", "无需认证", "鉴权绕过",
         # 复核 009 时补的：模型把「前缀匹配就算通过」也说成鉴权问题
         "过于宽松", "startswith", "无法验证身份",
+        "前缀",
     ],
     "log-injection": [
         "日志注入", "log injection", "换行注入", "伪造日志", "伪造审计",
@@ -130,6 +139,10 @@ TAXONOMY: dict[str, list[Alias]] = {
     "error-handling": [
         "吞掉异常", "静默失败", "裸 except", "bare except", "except: pass",
         "捕获所有异常", "忽略异常", "过宽的异常", "异常被吞", "静默返回",
+        # 复核 006 时补的：模型说「会静默吞掉文件不存在、权限……所有错误」
+        "静默吞掉",
+        # 复核 003 时补的：备份脚本没检查子进程返回码
+        "返回码", "掩盖失败",
     ],
     "boundary": [
         "边界", "范围校验", "负数", "未校验正负", "上限", "越界",
@@ -154,6 +167,8 @@ TAXONOMY: dict[str, list[Alias]] = {
     "excessive-data-exposure": [
         "select *", "所有列", "全部字段", "敏感字段", "过度返回",
         "返回全部", "不应返回",
+        # 复核 020 时补的：返回体里带了服务器绝对路径
+        "绝对路径",
     ],
     "insecure-transport": [
         "明文传输", "未启用 tls", "未启用tls", "starttls", "smtp_ssl",
@@ -162,6 +177,12 @@ TAXONOMY: dict[str, list[Alias]] = {
     "robustness": [
         "filenotfounderror", "makedirs", "目录不存在", "导致 500",
         "返回 500", "直接 500", "抛 500",
+    ],
+    # 复核 007/019 时新增：不是安全漏洞，而是「这段代码根本跑不对」。
+    # 原来的分类只覆盖 OWASP 式问题和健壮性，这类实现错误无处归类。
+    "functional-bug": [
+        "content-type", "截断", "乱码", "文本片段",
+        "app.run", "flask", "启动方式", "无法启动", "不存在该方法",
     ],
 }
 
@@ -195,6 +216,7 @@ TYPE_LABEL: dict[str, str] = {
     "excessive-data-exposure": "过度暴露数据",
     "insecure-transport": "明文传输",
     "robustness": "健壮性缺陷",
+    "functional-bug": "功能实现错误",
 }
 
 KIND_LABEL = {

@@ -15,6 +15,18 @@
       "file": "api/orders.py",
       "severity": "critical",
       "note": "只按 id 查订单，未校验订单是否属于当前用户"
+    },
+    {
+      "type": "none-check",
+      "file": "api/orders.py",
+      "severity": "major",
+      "note": "row 为 None 时 dict(row) 抛 TypeError（orders.py:+26）"
+    },
+    {
+      "type": "resource-leak",
+      "file": "api/orders.py",
+      "severity": "medium",
+      "note": "conn 未关闭（orders.py:+24）"
     }
   ]
 }

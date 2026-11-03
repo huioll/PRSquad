@@ -15,6 +15,18 @@
       "file": "api/auth.py",
       "severity": "high",
       "note": "API_KEY 明文写死在源码里"
+    },
+    {
+      "type": "weak-hash",
+      "file": "api/auth.py",
+      "severity": "high",
+      "note": "密码用无盐 SHA-256 存储（auth.py:+17），可被彩虹表破解"
+    },
+    {
+      "type": "timing-attack",
+      "file": "api/auth.py",
+      "severity": "low",
+      "note": "用 == 比较哈希（auth.py:+17），非恒定时间比较"
     }
   ]
 }

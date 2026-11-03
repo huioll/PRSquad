@@ -15,6 +15,12 @@
       "file": "api/download.py",
       "severity": "medium",
       "note": "open() 的文件句柄从未关闭，也没有 with"
+    },
+    {
+      "type": "robustness",
+      "file": "api/download.py",
+      "severity": "medium",
+      "note": "open 前未判断文件是否存在，缺失时抛异常返回 500（download.py:+18）"
     }
   ]
 }

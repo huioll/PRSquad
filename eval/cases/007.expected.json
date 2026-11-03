@@ -9,6 +9,18 @@
       "file": "api/proxy.py",
       "severity": "high",
       "note": "url 完全由请求方控制，可打到 169.254.169.254 等内网地址"
+    },
+    {
+      "type": "functional-bug",
+      "file": "api/proxy.py",
+      "severity": "medium",
+      "note": "图片代理返回 r.text[:2000]，既截断又未校验 Content-Type（proxy.py:+18）"
+    },
+    {
+      "type": "robustness",
+      "file": "api/proxy.py",
+      "severity": "medium",
+      "note": "httpx 请求异常未捕获，超时直返 500（proxy.py:+17）"
     }
   ]
 }

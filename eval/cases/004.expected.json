@@ -15,6 +15,18 @@
       "file": "core/password.py",
       "severity": "high",
       "note": "明文密码和哈希都写进了日志"
+    },
+    {
+      "type": "timing-attack",
+      "file": "core/password.py",
+      "severity": "low",
+      "note": "verify 用 == 比较哈希（password.py:+18），非恒定时间"
+    },
+    {
+      "type": "log-injection",
+      "file": "core/password.py",
+      "severity": "low",
+      "note": "日志直接拼接用户可控 raw，含换行可伪造日志条目（password.py:+19）"
     }
   ]
 }

@@ -15,6 +15,30 @@
       "file": "api/profile.py",
       "severity": "medium",
       "note": "整个用户记录（含手机号、邮箱）打进日志"
+    },
+    {
+      "type": "none-check",
+      "file": "api/profile.py",
+      "severity": "major",
+      "note": "用户不存在时 dict(row) 抛 TypeError，应返回 404（profile.py:+19~21）"
+    },
+    {
+      "type": "excessive-data-exposure",
+      "file": "api/profile.py",
+      "severity": "suggestion",
+      "note": "SELECT * 把全部字段（含手机号）返回给客户端（profile.py:+19）"
+    },
+    {
+      "type": "resource-leak",
+      "file": "api/profile.py",
+      "severity": "suggestion",
+      "note": "conn 未关闭（profile.py:+18）"
+    },
+    {
+      "type": "log-injection",
+      "file": "api/profile.py",
+      "severity": "medium",
+      "note": "日志拼接 uid 与整行记录，可注入换行伪造日志（profile.py:+20）"
     }
   ]
 }

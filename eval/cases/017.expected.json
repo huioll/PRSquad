@@ -15,6 +15,12 @@
       "file": "api/search.py",
       "severity": "medium",
       "note": "offset 未校验，负数会导致数据库报错"
+    },
+    {
+      "type": "robustness",
+      "file": "api/search.py",
+      "severity": "low",
+      "note": "offset 直接 int()，非数字输入抛 ValueError 返回 500（search.py:+18）"
     }
   ]
 }

@@ -685,6 +685,98 @@ CASES: list[dict] = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# 人工复核 46 条未匹配条目后补的标注（判定过程见 eval/adjudication.md）
+#
+# 收录标准：能在 diff 的新增行里指到具体某一行、且那行确实是缺陷。
+# 只是风格偏好、性能优化建议、或者模型自己说错（幻觉）的，一律不补，
+# 留作误报——否则等于拿模型的输出当标准答案，评估就失去意义了。
+# note 里记了证据行，方便回查。
+# ---------------------------------------------------------------------------
+ADJUDICATED: dict[str, list[dict]] = {
+    "001": [
+        {"type": "weak-hash", "file": "api/auth.py", "severity": "high",
+         "note": "密码用无盐 SHA-256 存储（auth.py:+17），可被彩虹表破解"},
+        {"type": "timing-attack", "file": "api/auth.py", "severity": "low",
+         "note": "用 == 比较哈希（auth.py:+17），非恒定时间比较"},
+    ],
+    "002": [
+        {"type": "robustness", "file": "api/download.py", "severity": "medium",
+         "note": "open 前未判断文件是否存在，缺失时抛异常返回 500（download.py:+18）"},
+    ],
+    "003": [
+        {"type": "error-handling", "file": "scripts/backup.py", "severity": "major",
+         "note": "subprocess.call 返回码未检查，备份失败仍打印 done（backup.py:+15）"},
+    ],
+    "004": [
+        {"type": "timing-attack", "file": "core/password.py", "severity": "low",
+         "note": "verify 用 == 比较哈希（password.py:+18），非恒定时间"},
+        {"type": "log-injection", "file": "core/password.py", "severity": "low",
+         "note": "日志直接拼接用户可控 raw，含换行可伪造日志条目（password.py:+19）"},
+    ],
+    "005": [
+        {"type": "resource-leak", "file": "api/stats.py", "severity": "major",
+         "note": "get_conn() 在 ratio 与 user_email 两个接口里都未关闭/归还（stats.py:+16、+24）"},
+        {"type": "broken-access-control", "file": "api/stats.py", "severity": "high",
+         "note": "/users/{uid}/email 无任何鉴权，可遍历 uid 枚举邮箱（stats.py:+22）"},
+    ],
+    "007": [
+        {"type": "functional-bug", "file": "api/proxy.py", "severity": "medium",
+         "note": "图片代理返回 r.text[:2000]，既截断又未校验 Content-Type（proxy.py:+18）"},
+        {"type": "robustness", "file": "api/proxy.py", "severity": "medium",
+         "note": "httpx 请求异常未捕获，超时直返 500（proxy.py:+17）"},
+    ],
+    "009": [
+        {"type": "none-check", "file": "api/orders.py", "severity": "major",
+         "note": "row 为 None 时 dict(row) 抛 TypeError（orders.py:+26）"},
+        {"type": "resource-leak", "file": "api/orders.py", "severity": "medium",
+         "note": "conn 未关闭（orders.py:+24）"},
+    ],
+    "010": [
+        {"type": "logic-error", "file": "api/feed.py", "severity": "major",
+         "note": "offset 用 page * 20，page=1 时跳过前 20 条（feed.py:+17）"},
+        {"type": "none-check", "file": "api/feed.py", "severity": "suggestion",
+         "note": "author 可能为 None，author.name 抛 AttributeError（feed.py:+22）"},
+    ],
+    "012": [
+        {"type": "none-check", "file": "api/stock.py", "severity": "major",
+         "note": "sku 不存在时 row 为 None，row[0] 抛 TypeError（stock.py:+18）"},
+        {"type": "resource-leak", "file": "api/stock.py", "severity": "medium",
+         "note": "conn 异常时未关闭也未 rollback（stock.py:+16）"},
+        {"type": "broken-access-control", "file": "api/stock.py", "severity": "high",
+         "note": "扣减库存接口无任何鉴权，任意调用方可改库存（stock.py:+14）"},
+    ],
+    "013": [
+        {"type": "none-check", "file": "api/profile.py", "severity": "major",
+         "note": "用户不存在时 dict(row) 抛 TypeError，应返回 404（profile.py:+19~21）"},
+        {"type": "excessive-data-exposure", "file": "api/profile.py", "severity": "suggestion",
+         "note": "SELECT * 把全部字段（含手机号）返回给客户端（profile.py:+19）"},
+        {"type": "resource-leak", "file": "api/profile.py", "severity": "suggestion",
+         "note": "conn 未关闭（profile.py:+18）"},
+        {"type": "log-injection", "file": "api/profile.py", "severity": "medium",
+         "note": "日志拼接 uid 与整行记录，可注入换行伪造日志（profile.py:+20）"},
+    ],
+    "014": [
+        {"type": "robustness", "file": "core/audit.py", "severity": "low",
+         "note": "日志路径硬编码 /var/log/app，非 root 或目录不存在时抛异常（audit.py:+13）"},
+    ],
+    "017": [
+        {"type": "robustness", "file": "api/search.py", "severity": "low",
+         "note": "offset 直接 int()，非数字输入抛 ValueError 返回 500（search.py:+18）"},
+    ],
+    "019": [
+        {"type": "functional-bug", "file": "main.py", "severity": "major",
+         "note": "FastAPI 应用调用 app.run()，无此方法，启动即 AttributeError（main.py:+21）"},
+    ],
+    "020": [
+        {"type": "robustness", "file": "api/upload.py", "severity": "major",
+         "note": "UPLOAD_DIR 未 makedirs，首次上传即 FileNotFoundError（upload.py:+19）"},
+        {"type": "excessive-data-exposure", "file": "api/upload.py", "severity": "low",
+         "note": "返回 saved 暴露服务器绝对路径（upload.py:+21）"},
+    ],
+}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="生成评估样本文件")
     parser.add_argument("--force", action="store_true", help="覆盖已存在的文件（会丢失手工修改）")
@@ -711,7 +803,8 @@ def main() -> None:
             "title": case["title"],
             "language": case["language"],
             "source": "synthetic",
-            "issues": case["issues"],
+            # 复核补的标注跟在原始设计意图后面，两者都算期望问题
+            "issues": case["issues"] + ADJUDICATED.get(case["id"], []),
         }
         expected_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
@@ -720,9 +813,10 @@ def main() -> None:
         )
         written += 1
 
-    total_issues = sum(len(c["issues"]) for c in CASES)
+    total_issues = sum(len(c["issues"]) + len(ADJUDICATED.get(c["id"], [])) for c in CASES)
     print(f"生成 {written} 份，跳过 {skipped} 份 → {CASES_DIR}")
-    print(f"样本共 {len(CASES)} 份，标注了 {total_issues} 个期望问题")
+    print(f"样本共 {len(CASES)} 份，标注了 {total_issues} 个期望问题"
+          f"（其中 {sum(len(v) for v in ADJUDICATED.values())} 个来自人工复核补充）")
 
 
 if __name__ == "__main__":

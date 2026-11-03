@@ -15,6 +15,18 @@
       "file": "api/stats.py",
       "severity": "major",
       "note": "uid 不存在时 fetchone() 返回 None，row.email 直接 AttributeError"
+    },
+    {
+      "type": "resource-leak",
+      "file": "api/stats.py",
+      "severity": "major",
+      "note": "get_conn() 在 ratio 与 user_email 两个接口里都未关闭/归还（stats.py:+16、+24）"
+    },
+    {
+      "type": "broken-access-control",
+      "file": "api/stats.py",
+      "severity": "high",
+      "note": "/users/{uid}/email 无任何鉴权，可遍历 uid 枚举邮箱（stats.py:+22）"
     }
   ]
 }

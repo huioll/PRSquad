@@ -15,6 +15,12 @@
       "file": "scripts/backup.py",
       "severity": "high",
       "note": "数据库密码明文硬编码"
+    },
+    {
+      "type": "error-handling",
+      "file": "scripts/backup.py",
+      "severity": "major",
+      "note": "subprocess.call 返回码未检查，备份失败仍打印 done（backup.py:+15）"
     }
   ]
 }

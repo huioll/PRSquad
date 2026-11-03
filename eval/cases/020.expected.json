@@ -15,6 +15,18 @@
       "file": "api/upload.py",
       "severity": "critical",
       "note": "filename 可含 ../，能把文件写到上传目录之外"
+    },
+    {
+      "type": "robustness",
+      "file": "api/upload.py",
+      "severity": "major",
+      "note": "UPLOAD_DIR 未 makedirs，首次上传即 FileNotFoundError（upload.py:+19）"
+    },
+    {
+      "type": "excessive-data-exposure",
+      "file": "api/upload.py",
+      "severity": "low",
+      "note": "返回 saved 暴露服务器绝对路径（upload.py:+21）"
     }
   ]
 }

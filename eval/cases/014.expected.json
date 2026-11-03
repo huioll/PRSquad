@@ -9,6 +9,12 @@
       "file": "core/audit.py",
       "severity": "medium",
       "note": "detail 含换行符时可伪造整条审计记录"
+    },
+    {
+      "type": "robustness",
+      "file": "core/audit.py",
+      "severity": "low",
+      "note": "日志路径硬编码 /var/log/app，非 root 或目录不存在时抛异常（audit.py:+13）"
     }
   ]
 }

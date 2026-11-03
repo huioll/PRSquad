@@ -15,6 +15,12 @@
       "file": "main.py",
       "severity": "high",
       "note": "生产入口开启 debug，异常页会泄露源码和变量"
+    },
+    {
+      "type": "functional-bug",
+      "file": "main.py",
+      "severity": "major",
+      "note": "FastAPI 应用调用 app.run()，无此方法，启动即 AttributeError（main.py:+21）"
     }
   ]
 }
