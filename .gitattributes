@@ -1,0 +1,11 @@
+# 统一换行符，避免 Windows 检出后与 Linux/macOS 行为不一致
+* text=auto
+
+*.py    text eol=lf
+*.md    text eol=lf
+*.toml  text eol=lf
+
+# 评估样本必须按原字节保存：diff 里一旦混入 CR，
+# 按行切分和关键词匹配都会偏离，指标就不可复现了
+*.diff           -text
+*.expected.json  -text
