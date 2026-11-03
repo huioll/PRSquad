@@ -28,6 +28,7 @@ async def test_graph_renders_markdown_with_section_per_agent():
         "reports": [],
     })
     md = state["markdown"]
-    for header in ("Reviewer", "Security", "Tests", "Docs"):
-        assert header in md, f"missing section: {header}"
+    # 标题已中文化，断言跟着改（这是改显示文案时的连带影响，跑测试就会发现）
+    for header in ("🧐 代码质量", "🛡️ 安全", "🧪 测试", "📚 文档"):
+        assert header in md, f"缺少分区：{header}"
     assert "PRSquad" in md

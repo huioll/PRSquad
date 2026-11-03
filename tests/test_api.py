@@ -13,7 +13,14 @@ from prsquad import config, main
 
 @pytest.fixture(autouse=True)
 def reset_settings(monkeypatch):
-    """Force a fresh Settings instance per test (env vars can drift)."""
+    """Force a fresh Settings instance per test (env vars can drift).
+
+    同时把 provider 强制钉成 stub。原因：一旦本机存在 .env 且配了真实 key，
+    这些用例会真的去调付费接口——既慢、又花钱，而且结果不确定。
+    环境变量的优先级高于 .env，所以这里设置能覆盖掉配置文件。
+    """
+    monkeypatch.setenv("PRSQUAD_LLM_PROVIDER", "stub")
+    monkeypatch.delenv("PRSQUAD_OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(config, "_settings", None)
 
 
