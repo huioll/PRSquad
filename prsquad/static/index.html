@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PRSquad · 多智能体代码审查</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e2e5ea;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-soft: #eef0ff;
+    --ok: #0f9d58;
+    --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 22px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 700; letter-spacing: .2px; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .badge {
+    margin-left: auto;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge.stub { background: #fff4e5; color: var(--warn); }
+  main {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+    gap: 16px;
+    padding: 16px 22px 28px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .card-head .hint { color: var(--muted); font-weight: 400; font-size: 12px; }
+  textarea {
+    width: 100%;
+    height: 420px;
+    border: 0;
+    padding: 12px 14px;
+    font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    color: var(--text);
+    background: #fcfcfd;
+  }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    background: #fafbfc;
+    flex-wrap: wrap;
+  }
+  button {
+    font: inherit;
+    font-size: 13px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  button:hover { border-color: #c9ced6; background: #f7f8fa; }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  button.primary:hover { background: #4338ca; }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .status { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .status.err { color: #c0392b; }
+  #result {
+    padding: 14px 18px;
+    min-height: 420px;
+    max-height: 70vh;
+    overflow: auto;
+  }
+  .empty {
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 380px;
+    gap: 6px;
+    text-align: center;
+  }
+  .empty .big { font-size: 26px; opacity: .5; }
+  #result h3 {
+    font-size: 14px;
+    margin: 18px 0 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed var(--border);
+  }
+  #result h3:first-child { margin-top: 0; }
+  #result p { margin: 6px 0; }
+  #result ul { margin: 6px 0; padding-left: 20px; }
+  #result li { margin: 3px 0; }
+  #result code {
+    background: #f2f3f5;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 12px;
+  }
+  #result blockquote {
+    margin: 8px 0;
+    padding: 6px 12px;
+    border-left: 3px solid #f0b429;
+    background: #fffaf0;
+    color: #6b4a00;
+    border-radius: 0 6px 6px 0;
+  }
+  #result hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+  #raw {
+    display: none;
+    margin: 0;
+    padding: 14px 18px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 12px;
+    background: #fcfcfd;
+    max-height: 70vh;
+    overflow: auto;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>PRSquad</h1>
+  <span class="sub">四路并行 · 多智能体代码审查</span>
+  <span id="badge" class="badge">连接中…</span>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-head">待审查的 diff <span class="hint">粘贴 unified diff，或改下面这段示例</span></div>
+    <textarea id="diff" spellcheck="false"></textarea>
+    <div class="toolbar">
+      <button class="primary" id="run">开始审查</button>
+      <button id="sample">载入示例</button>
+      <button id="clear">清空</button>
+      <span class="status" id="status">就绪</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      审查结果
+      <span class="hint" id="meta"></span>
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button id="toggle" style="padding:3px 10px;font-size:12px">原始 Markdown</button>
+        <button id="copy" style="padding:3px 10px;font-size:12px">复制</button>
+      </span>
+    </div>
+    <div id="result">
+      <div class="empty">
+        <div class="big">⌁</div>
+        <div>左边贴上 diff，点「开始审查」</div>
+        <div style="font-size:12px">四个 agent 会并行看同一份变更，最后汇总成这段报告</div>
+      </div>
+    </div>
+    <pre id="raw"></pre>
+  </section>
+</main>
+
+<script>
+const SAMPLE = `diff --git a/api/auth.py b/api/auth.py
+index 1111111..2222222 100644
+--- a/api/auth.py
++++ b/api/auth.py
+@@ -1,12 +1,26 @@
++import subprocess
++import hashlib
++
++API_KEY = "sk-live-8f3a9c2e1d"
++
+ def login(user, pwd):
+-    return check(user, pwd)
++    cmd = "grep %s /etc/passwd" % user
++    proc = subprocess.run(cmd, shell=True, capture_output=True)
++    if proc.returncode == 0:
++        return make_token(user)
++    return None
++
++def make_token(user):
++    return hashlib.md5(user.encode()).hexdigest()
+
+diff --git a/utils/helper.py b/utils/helper.py
+--- a/utils/helper.py
++++ b/utils/helper.py
+@@ -1,4 +1,9 @@
+-def total(items):
+-    s = 0
+-    for i in items:
+-        s += i
+-    return s
++def total(items):
++    s = 0
++    for i in items:
++        s += i
++    return s
++
++def rate(v):
++    return v / 0
+`;
+
+const $ = (id) => document.getElementById(id);
+let lastMarkdown = "";
+
+/* ---------- 极简 Markdown 渲染：只覆盖后端实际会产出的语法 ---------- */
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function inline(s) {
+  return s
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^\w])_([^_]+)_/g, "$1<em>$2</em>");
+}
+
+function renderMarkdown(md) {
+  const lines = escapeHtml(md).split("\n");
+  let html = "", inList = false, liOpen = false;
+  const closeLi = () => { if (liOpen) { html += "</li>"; liOpen = false; } };
+  const closeList = () => { closeLi(); if (inList) { html += "</ul>"; inList = false; } };
+
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, "");
+    if (!line.trim()) continue;                     // 空行不打断列表，避免多行项被拆散
+    if (/^\s{2,}\S/.test(line) && inList) {         // 缩进续行 → 接在上一个 li 里
+      html += "<br>" + inline(line.trim());
+      continue;
+    }
+    if (/^###\s+/.test(line)) { closeList(); html += "<h3>" + inline(line.replace(/^###\s+/, "")) + "</h3>"; continue; }
+    if (/^---+\s*$/.test(line)) { closeList(); html += "<hr>"; continue; }
+    if (/^&gt;\s?/.test(line)) { closeList(); html += "<blockquote>" + inline(line.replace(/^&gt;\s?/, "")) + "</blockquote>"; continue; }
+    if (/^[-*]\s+/.test(line)) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      closeLi();
+      html += "<li>" + inline(line.replace(/^[-*]\s+/, ""));
+      liOpen = true;
+      continue;
+    }
+    closeList();
+    html += "<p>" + inline(line) + "</p>";
+  }
+  closeList();
+  return html;
+}
+
+/* ---------- 与服务端交互 ---------- */
+async function loadHealth() {
+  try {
+    const r = await fetch("/health");
+    const j = await r.json();
+    const badge = $("badge");
+    if (j.llm_provider === "stub") {
+      badge.textContent = "假模型 · 结果是固定模板";
+      badge.classList.add("stub");
+    } else {
+      badge.textContent = "真实模型 · " + (j.model || "unknown");
+      badge.classList.remove("stub");
+    }
+  } catch (e) {
+    $("badge").textContent = "服务未连接";
+  }
+}
+
+async function runReview() {
+  const diff = $("diff").value.trim();
+  if (!diff) { setStatus("请先粘贴 diff", true); return; }
+
+  const btn = $("run");
+  btn.disabled = true;
+  setStatus("审查中…（四个 agent 并行）");
+  const t0 = performance.now();
+
+  try {
+    const res = await fetch("/v1/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ owner: "demo", repo: "demo", pr_number: 1, diff }),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status + " " + (await res.text()).slice(0, 200));
+
+    const data = await res.json();
+    lastMarkdown = data.markdown || "";
+
+    $("result").innerHTML = renderMarkdown(lastMarkdown);
+    $("result").style.display = "block";
+    $("raw").style.display = "none";
+    $("raw").textContent = lastMarkdown;
+    $("toggle").textContent = "原始 Markdown";
+
+    const ms = Math.round(performance.now() - t0);
+    $("meta").textContent = `${data.reports.length} 个 agent · ${ms} ms`;
+    setStatus("完成，用时 " + ms + " ms");
+  } catch (err) {
+    setStatus("失败：" + err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function setStatus(text, isErr) {
+  const el = $("status");
+  el.textContent = text;
+  el.classList.toggle("err", !!isErr);
+}
+
+/* ---------- 事件绑定 ---------- */
+$("run").addEventListener("click", runReview);
+$("sample").addEventListener("click", () => { $("diff").value = SAMPLE; setStatus("已载入示例"); });
+$("clear").addEventListener("click", () => {
+  $("diff").value = "";
+  setStatus("就绪");
+});
+$("toggle").addEventListener("click", () => {
+  if (!lastMarkdown) return;
+  const showingRaw = $("raw").style.display === "block";
+  $("raw").style.display = showingRaw ? "none" : "block";
+  $("result").style.display = showingRaw ? "block" : "none";
+  $("toggle").textContent = showingRaw ? "原始 Markdown" : "渲染视图";
+});
+$("copy").addEventListener("click", async () => {
+  if (!lastMarkdown) return;
+  try {
+    await navigator.clipboard.writeText(lastMarkdown);
+    setStatus("已复制到剪贴板");
+  } catch {
+    setStatus("复制失败，请手动选择", true);
+  }
+});
+
+// Ctrl / Cmd + Enter 直接跑
+$("diff").addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") runReview();
+});
+
+$("diff").value = SAMPLE;
+loadHealth();
+</script>
+</body>
+</html>
