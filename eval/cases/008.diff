@@ -1,0 +1,13 @@
+diff --git a/web/comment.js b/web/comment.js
+--- a/web/comment.js
++++ b/web/comment.js
+@@ -1,8 +1,16 @@
+ export function renderComment(container, comment) {
+-  container.textContent = comment.body;
++  const html = `
++    <div class="comment">
++      <span class="user">${comment.user}</span>
++      <div class="body">${comment.body}</div>
++    </div>`;
++  container.innerHTML = html;
+ }

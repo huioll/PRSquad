@@ -1,0 +1,21 @@
+diff --git a/api/profile.py b/api/profile.py
+--- a/api/profile.py
++++ b/api/profile.py
+@@ -1,12 +1,20 @@
++import logging
+ from fastapi import APIRouter
+ from db import get_conn
+
++log = logging.getLogger(__name__)
+ router = APIRouter()
+
+
+-@router.get("/profile/{uid}")
+-def profile(uid: int):
+-    return {}
++@router.get("/profile/{uid}")
++def profile(uid: int):
++    conn = get_conn()
++    row = conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
++    log.info("profile fetch uid=%s payload=%s", uid, dict(row))
++    return dict(row)

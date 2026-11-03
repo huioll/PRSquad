@@ -1,0 +1,23 @@
+diff --git a/api/auth.py b/api/auth.py
+--- a/api/auth.py
++++ b/api/auth.py
+@@ -1,12 +1,26 @@
+ import hashlib
++import sqlite3
+
++API_KEY = "sk-live-9f2c7b1e4a"
+
+-def login(conn, username, password):
+-    sql = "SELECT id, pwd FROM users WHERE name = ?"
+-    row = conn.execute(sql, (username,)).fetchone()
+-    return row
++def login(conn, username, password):
++    sql = f"SELECT id, pwd FROM users WHERE name = '{username}'"
++    row = conn.execute(sql).fetchone()
++    if row and row[1] == hashlib.sha256(password.encode()).hexdigest():
++        return {"user_id": row[0], "api_key": API_KEY}
++    return None
++
++
++def fetch_profile(conn, user_id):
++    return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()

@@ -1,0 +1,14 @@
+{
+  "id": "008",
+  "title": "前端评论渲染",
+  "language": "javascript",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "xss",
+      "file": "web/comment.js",
+      "severity": "high",
+      "note": "用户内容未转义直接 innerHTML，存储型 XSS"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+diff --git a/api/reset.py b/api/reset.py
+--- a/api/reset.py
++++ b/api/reset.py
+@@ -1,12 +1,20 @@
++import random
++import smtplib
++
++SMTP_PASSWORD = "mailpass2024"
++
+
+ def make_code() -> str:
+-    raise NotImplementedError
++    return str(random.randint(100000, 999999))
+
+
+ def send_code(email: str, code: str) -> None:
+-    raise NotImplementedError
++    with smtplib.SMTP("smtp.example.com", 25) as s:
++        s.login("noreply@example.com", SMTP_PASSWORD)
++        s.sendmail("noreply@example.com", email, f"code: {code}")

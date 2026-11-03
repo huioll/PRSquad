@@ -1,0 +1,20 @@
+{
+  "id": "013",
+  "title": "用户资料查询",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "broken-access-control",
+      "file": "api/profile.py",
+      "severity": "high",
+      "note": "任意 uid 都能查，未校验是否是当前登录用户"
+    },
+    {
+      "type": "sensitive-log",
+      "file": "api/profile.py",
+      "severity": "medium",
+      "note": "整个用户记录（含手机号、邮箱）打进日志"
+    }
+  ]
+}

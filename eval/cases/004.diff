@@ -1,0 +1,20 @@
+diff --git a/core/password.py b/core/password.py
+--- a/core/password.py
++++ b/core/password.py
+@@ -1,12 +1,20 @@
++import hashlib
++import logging
++
++log = logging.getLogger(__name__)
++
+
+ def hash_password(raw: str) -> str:
+-    raise NotImplementedError
++    return hashlib.md5(raw.encode()).hexdigest()
+
+
+ def verify(raw: str, stored: str) -> bool:
+-    raise NotImplementedError
++    ok = hash_password(raw) == stored
++    log.info("verify raw=%s stored=%s ok=%s", raw, stored, ok)
++    return ok

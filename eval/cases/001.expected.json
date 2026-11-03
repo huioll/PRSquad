@@ -1,0 +1,20 @@
+{
+  "id": "001",
+  "title": "用户登录接口改造",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "sql-injection",
+      "file": "api/auth.py",
+      "severity": "critical",
+      "note": "用户名用 f-string 直接拼进 SQL，可注入 ' OR '1'='1"
+    },
+    {
+      "type": "hardcoded-secret",
+      "file": "api/auth.py",
+      "severity": "high",
+      "note": "API_KEY 明文写死在源码里"
+    }
+  ]
+}

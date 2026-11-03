@@ -1,0 +1,17 @@
+diff --git a/db/pool.py b/db/pool.py
+--- a/db/pool.py
++++ b/db/pool.py
+@@ -1,12 +1,20 @@
+ import psycopg2.pool
+
+ pool = psycopg2.pool.SimpleConnectionPool(1, 20, dsn="dbname=app")
+
+
+ def query(sql: str, params=None):
+-    raise NotImplementedError
++    conn = pool.getconn()
++    cur = conn.cursor()
++    cur.execute(sql, params or ())
++    rows = cur.fetchall()
++    cur.close()
++    return rows

@@ -1,0 +1,21 @@
+diff --git a/config/loader.py b/config/loader.py
+--- a/config/loader.py
++++ b/config/loader.py
+@@ -1,12 +1,20 @@
++import yaml
++
+
+ def load(path: str) -> dict:
+-    raise NotImplementedError
++    with open(path, "r", encoding="utf-8") as f:
++        return yaml.load(f, Loader=yaml.Loader)
+
+
+ def load_plugins(path: str) -> list:
+-    raise NotImplementedError
++    try:
++        with open(path, "rb") as f:
++            import pickle
++            return pickle.load(f)
++    except Exception:
++        return []

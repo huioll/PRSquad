@@ -1,0 +1,20 @@
+{
+  "id": "006",
+  "title": "配置与插件加载",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "unsafe-deserialization",
+      "file": "config/loader.py",
+      "severity": "critical",
+      "note": "yaml.Loader 和 pickle.load 都能执行任意代码"
+    },
+    {
+      "type": "error-handling",
+      "file": "config/loader.py",
+      "severity": "medium",
+      "note": "except Exception 吞掉异常并静默返回空列表，故障不可见"
+    }
+  ]
+}

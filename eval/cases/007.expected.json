@@ -1,0 +1,14 @@
+{
+  "id": "007",
+  "title": "图片代理接口",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "ssrf",
+      "file": "api/proxy.py",
+      "severity": "high",
+      "note": "url 完全由请求方控制，可打到 169.254.169.254 等内网地址"
+    }
+  ]
+}

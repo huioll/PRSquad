@@ -1,0 +1,23 @@
+diff --git a/api/stock.py b/api/stock.py
+--- a/api/stock.py
++++ b/api/stock.py
+@@ -1,12 +1,24 @@
+ from fastapi import APIRouter
+ from db import get_conn
+
+ router = APIRouter()
+
+
+-@router.post("/stock/deduct")
+-def deduct(sku: str, qty: int):
+-    return {}
++@router.post("/stock/deduct")
++def deduct(sku: str, qty: int):
++    conn = get_conn()
++    row = conn.execute("SELECT stock FROM items WHERE sku = ?", (sku,)).fetchone()
++    current = row[0]
++    if current >= qty:
++        conn.execute("UPDATE items SET stock = ? WHERE sku = ?", (current - qty, sku))
++        conn.commit()
++        return {"ok": True}
++    return {"ok": False}

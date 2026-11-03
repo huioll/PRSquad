@@ -1,0 +1,15 @@
+diff --git a/core/audit.py b/core/audit.py
+--- a/core/audit.py
++++ b/core/audit.py
+@@ -1,10 +1,16 @@
+ import logging
+
+ log = logging.getLogger("audit")
+
+
+ def record(action: str, detail: str) -> None:
+-    raise NotImplementedError
++    line = "action=%s detail=%s" % (action, detail)
++    with open("/var/log/app/audit.log", "a", encoding="utf-8") as f:
++        f.write(line + "\n")
++    log.info(line)

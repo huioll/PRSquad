@@ -1,0 +1,20 @@
+{
+  "id": "016",
+  "title": "邮箱验证码重置",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "weak-random",
+      "file": "api/reset.py",
+      "severity": "high",
+      "note": "random 是伪随机，种子可预测，验证码可被算出来"
+    },
+    {
+      "type": "hardcoded-secret",
+      "file": "api/reset.py",
+      "severity": "high",
+      "note": "SMTP 密码硬编码在源码里"
+    }
+  ]
+}

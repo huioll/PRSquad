@@ -1,0 +1,20 @@
+{
+  "id": "009",
+  "title": "订单查询接口鉴权",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "auth-bypass",
+      "file": "api/orders.py",
+      "severity": "critical",
+      "note": "token 为空时 check_token 返回 True，不传凭证即可通过"
+    },
+    {
+      "type": "broken-access-control",
+      "file": "api/orders.py",
+      "severity": "critical",
+      "note": "只按 id 查订单，未校验订单是否属于当前用户"
+    }
+  ]
+}

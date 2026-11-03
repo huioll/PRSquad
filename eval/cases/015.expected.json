@@ -1,0 +1,14 @@
+{
+  "id": "015",
+  "title": "连接池查询封装",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "resource-leak",
+      "file": "db/pool.py",
+      "severity": "high",
+      "note": "getconn() 后从未 putconn()，池子会被抽干"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+diff --git a/api/stats.py b/api/stats.py
+--- a/api/stats.py
++++ b/api/stats.py
+@@ -1,12 +1,24 @@
+ from fastapi import APIRouter
++from db import get_conn
+
+ router = APIRouter()
+
+
+-@router.get("/stats/ratio")
+-def ratio():
+-    return {"value": 0}
++@router.get("/stats/ratio")
++def ratio():
++    conn = get_conn()
++    total = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
++    paid = conn.execute("SELECT COUNT(*) FROM orders WHERE paid = 1").fetchone()[0]
++    return {"value": paid / total}
++
++
++@router.get("/users/{uid}/email")
++def user_email(uid: int):
++    conn = get_conn()
++    row = conn.execute("SELECT email FROM users WHERE id = ?", (uid,)).fetchone()
++    return {"email": row.email}

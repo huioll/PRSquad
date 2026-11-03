@@ -1,0 +1,20 @@
+{
+  "id": "017",
+  "title": "文档搜索",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "sql-injection",
+      "file": "api/search.py",
+      "severity": "critical",
+      "note": "q 和 order 都直接拼进 SQL，order 还可用于注入任意语句"
+    },
+    {
+      "type": "boundary",
+      "file": "api/search.py",
+      "severity": "medium",
+      "note": "offset 未校验，负数会导致数据库报错"
+    }
+  ]
+}

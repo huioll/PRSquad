@@ -1,0 +1,19 @@
+diff --git a/core/cache.py b/core/cache.py
+--- a/core/cache.py
++++ b/core/cache.py
+@@ -1,12 +1,20 @@
+ from redis import Redis
+
+ r = Redis(host="localhost", port=6379)
+
+
+ def get_config(key: str) -> dict:
+-    raise NotImplementedError
++    raw = r.get(key)
++    parts = raw.decode().split("=")
++    return {parts[0]: parts[1]}
+
+
+ def hit_rate(hits: int, total: int) -> float:
+-    raise NotImplementedError
++    return hits / total

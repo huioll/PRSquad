@@ -1,0 +1,20 @@
+{
+  "id": "010",
+  "title": "动态流分页",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "n-plus-one",
+      "file": "api/feed.py",
+      "severity": "major",
+      "note": "循环里逐条查作者，20 条动态发 21 次查询"
+    },
+    {
+      "type": "boundary",
+      "file": "api/feed.py",
+      "severity": "medium",
+      "note": "page 未做范围校验，传负数或超大值会得到异常 offset"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "014",
+  "title": "审计日志写入",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "log-injection",
+      "file": "core/audit.py",
+      "severity": "medium",
+      "note": "detail 含换行符时可伪造整条审计记录"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "002",
+  "title": "报表下载接口",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "path-traversal",
+      "file": "api/download.py",
+      "severity": "critical",
+      "note": "name 直接拼路径，传 ../../etc/passwd 可读任意文件"
+    },
+    {
+      "type": "resource-leak",
+      "file": "api/download.py",
+      "severity": "medium",
+      "note": "open() 的文件句柄从未关闭，也没有 with"
+    }
+  ]
+}

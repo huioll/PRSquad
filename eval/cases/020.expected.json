@@ -1,0 +1,20 @@
+{
+  "id": "020",
+  "title": "附件上传",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "unrestricted-upload",
+      "file": "api/upload.py",
+      "severity": "high",
+      "note": "不校验类型和大小，可传 .py/.php 等可执行文件"
+    },
+    {
+      "type": "path-traversal",
+      "file": "api/upload.py",
+      "severity": "critical",
+      "note": "filename 可含 ../，能把文件写到上传目录之外"
+    }
+  ]
+}

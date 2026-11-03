@@ -1,0 +1,21 @@
+diff --git a/api/upload.py b/api/upload.py
+--- a/api/upload.py
++++ b/api/upload.py
+@@ -1,12 +1,22 @@
++import os
++import shutil
++from fastapi import APIRouter, UploadFile
++
++router = APIRouter()
++UPLOAD_DIR = "/srv/uploads"
+
+-@router.post("/upload")
+-def upload(file: UploadFile):
+-    return {}
++
++@router.post("/upload")
++def upload(file: UploadFile):
++    dest = os.path.join(UPLOAD_DIR, file.filename)
++    with open(dest, "wb") as out:
++        shutil.copyfileobj(file.file, out)
++    return {"saved": dest}

@@ -1,0 +1,20 @@
+{
+  "id": "011",
+  "title": "任务重试逻辑",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "error-handling",
+      "file": "worker/retry.py",
+      "severity": "major",
+      "note": "裸 except + pass，失败被完全吞掉，调用方永远拿不到 False"
+    },
+    {
+      "type": "resource-leak",
+      "file": "worker/retry.py",
+      "severity": "medium",
+      "note": "session 从未 close，连接会逐步耗尽"
+    }
+  ]
+}

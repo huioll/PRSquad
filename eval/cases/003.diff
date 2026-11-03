@@ -1,0 +1,16 @@
+diff --git a/scripts/backup.py b/scripts/backup.py
+--- a/scripts/backup.py
++++ b/scripts/backup.py
+@@ -1,10 +1,16 @@
+ import os
++import subprocess
++import sys
+
++DB_PASSWORD = "P@ssw0rd2024"
+
+-def backup(target: str) -> None:
+-    raise NotImplementedError
++def backup(target: str) -> None:
++    cmd = "mysqldump -uroot -p%s mydb > /backup/%s.sql" % (DB_PASSWORD, target)
++    subprocess.call(cmd, shell=True)
++    print("backup done:", target)

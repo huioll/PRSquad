@@ -1,0 +1,20 @@
+diff --git a/api/download.py b/api/download.py
+--- a/api/download.py
++++ b/api/download.py
+@@ -1,14 +1,22 @@
+ import os
+ from fastapi import APIRouter
+ from fastapi.responses import FileResponse
+
+ router = APIRouter()
+ BASE = "/srv/reports"
+
+-@router.get("/reports/{name}")
+-def get_report(name: str):
+-    return {"error": "not implemented"}
++@router.get("/reports")
++def get_report(name: str):
++    path = os.path.join(BASE, name)
++    f = open(path, "rb")
++    data = f.read()
++    return FileResponse(path)

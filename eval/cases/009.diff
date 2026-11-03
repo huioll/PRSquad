@@ -1,0 +1,26 @@
+diff --git a/api/orders.py b/api/orders.py
+--- a/api/orders.py
++++ b/api/orders.py
+@@ -1,14 +1,26 @@
+ from fastapi import APIRouter, Header
+ from db import get_conn
+
+ router = APIRouter()
+
+
+-@router.get("/orders/{oid}")
+-def get_order(oid: int):
+-    return {}
++def check_token(token: str | None) -> bool:
++    if not token:
++        return True
++    return token.startswith("tk_")
++
++
++@router.get("/orders/{oid}")
++def get_order(oid: int, authorization: str | None = Header(default=None)):
++    if not check_token(authorization):
++        return {"error": "unauthorized"}
++    conn = get_conn()
++    row = conn.execute("SELECT * FROM orders WHERE id = ?", (oid,)).fetchone()
++    return dict(row)

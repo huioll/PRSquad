@@ -1,0 +1,20 @@
+diff --git a/worker/retry.py b/worker/retry.py
+--- a/worker/retry.py
++++ b/worker/retry.py
+@@ -1,12 +1,22 @@
+ import logging
++from db import new_session
+
+ log = logging.getLogger(__name__)
+
+
+ def run_job(job_id: int) -> bool:
+-    raise NotImplementedError
++    session = new_session()
++    try:
++        job = session.get(job_id)
++        job.attempts += 1
++        session.commit()
++        return True
++    except:
++        pass

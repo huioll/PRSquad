@@ -1,0 +1,20 @@
+{
+  "id": "012",
+  "title": "库存扣减",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "race-condition",
+      "file": "api/stock.py",
+      "severity": "critical",
+      "note": "先读后写不在同一事务/锁内，并发请求会超卖"
+    },
+    {
+      "type": "boundary",
+      "file": "api/stock.py",
+      "severity": "high",
+      "note": "qty 未校验正负，传负数等于反向加库存"
+    }
+  ]
+}

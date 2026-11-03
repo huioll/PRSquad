@@ -1,0 +1,20 @@
+{
+  "id": "004",
+  "title": "密码哈希与校验",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "weak-hash",
+      "file": "core/password.py",
+      "severity": "high",
+      "note": "MD5 无盐哈希存密码，可被彩虹表快速破解"
+    },
+    {
+      "type": "sensitive-log",
+      "file": "core/password.py",
+      "severity": "high",
+      "note": "明文密码和哈希都写进了日志"
+    }
+  ]
+}

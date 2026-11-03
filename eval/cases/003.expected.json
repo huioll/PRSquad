@@ -1,0 +1,20 @@
+{
+  "id": "003",
+  "title": "数据库备份脚本",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "command-injection",
+      "file": "scripts/backup.py",
+      "severity": "critical",
+      "note": "target 拼进 shell 命令且 shell=True，可执行任意命令"
+    },
+    {
+      "type": "hardcoded-secret",
+      "file": "scripts/backup.py",
+      "severity": "high",
+      "note": "数据库密码明文硬编码"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+diff --git a/api/search.py b/api/search.py
+--- a/api/search.py
++++ b/api/search.py
+@@ -1,12 +1,20 @@
+ from fastapi import APIRouter, Request
+ from db import get_conn
+
+ router = APIRouter()
+
+
+-@router.get("/search")
+-def search(q: str):
+-    return []
++@router.get("/search")
++def search(request: Request):
++    q = request.query_params.get("q", "")
++    order = request.query_params.get("sort", "id")
++    offset = int(request.query_params.get("offset", 0))
++    sql = f"SELECT id, title FROM docs WHERE title LIKE '%{q}%' ORDER BY {order} LIMIT 20 OFFSET {offset}"
++    return [dict(r) for r in get_conn().execute(sql).fetchall()]

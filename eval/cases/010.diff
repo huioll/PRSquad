@@ -1,0 +1,23 @@
+diff --git a/api/feed.py b/api/feed.py
+--- a/api/feed.py
++++ b/api/feed.py
+@@ -1,12 +1,22 @@
+ from fastapi import APIRouter, Request
+ from models import Post, User
+ from db import session
+
+ router = APIRouter()
+
+
+-@router.get("/feed")
+-def feed():
+-    return []
++@router.get("/feed")
++def feed(request: Request):
++    page = int(request.query_params.get("page", 1))
++    posts = session.query(Post).offset(page * 20).limit(20).all()
++    out = []
++    for p in posts:
++        author = session.query(User).filter(User.id == p.author_id).first()
++        out.append({"id": p.id, "title": p.title, "author": author.name})
++    return out

@@ -1,0 +1,20 @@
+{
+  "id": "005",
+  "title": "统计接口新增付费率",
+  "language": "python",
+  "source": "synthetic",
+  "issues": [
+    {
+      "type": "div-zero",
+      "file": "api/stats.py",
+      "severity": "high",
+      "note": "订单表为空时 total=0，paid/total 抛 ZeroDivisionError"
+    },
+    {
+      "type": "none-check",
+      "file": "api/stats.py",
+      "severity": "major",
+      "note": "uid 不存在时 fetchone() 返回 None，row.email 直接 AttributeError"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+diff --git a/api/proxy.py b/api/proxy.py
+--- a/api/proxy.py
++++ b/api/proxy.py
+@@ -1,10 +1,18 @@
++import httpx
++from fastapi import APIRouter
++
++router = APIRouter()
+
+-@router.get("/fetch")
+-def fetch():
+-    return {}
++
++@router.get("/fetch")
++async def fetch(url: str):
++    async with httpx.AsyncClient(timeout=10.0) as c:
++        r = await c.get(url)
++        return {"status": r.status_code, "body": r.text[:2000]}
