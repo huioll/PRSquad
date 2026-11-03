@@ -17,10 +17,12 @@
 指标口径（重要，面试被追问时要能解释）：
     命中率 recall   = 被发现的期望问题数 / 期望问题总数
     样本全中率      = 期望问题全部被发现的样本数 / 样本总数
-    误报率 fp_rate  = 未被任何期望问题匹配上的条目数 / 全部问题条目数
+    误报率 fp_rate  = 既没命中、也不属于重复提出的条目数 / 有效条目数
+                      有效条目 = 全部条目 - 重复提出（同一处问题被两个 agent 各报一次）
     问题条目        = 只统计 comments（代码质量）和 findings（安全），
                       因为 suggestions/drafts 是「补充建议」不是「报错」，
                       把它们算进误报会虚高。可用 --kinds 调整。
+    标注与条目的匹配严格一对一：一条标注只认领一条输出，剩下的记为重复提出。
     注意：误报数会偏高——模型可能报了真实存在但我没埋的问题。
           报告最后一节会把每条误报列出来，需要人工判定「真误报」还是「漏标」。
 """
@@ -164,8 +166,12 @@ TAXONOMY: dict[str, list[Alias]] = {
         "分页", "offset", "偏移量", "跳过第一页", "page * 20", "page*20",
         ("分页", "错"), ("offset", "错"),
     ],
+    # 「select *」单独作别名太宽：模型举例写参数化查询时也会出现 select *，
+    # 一条说「SQL 拼接」的幻觉能靠它蹭到「数据过度暴露」的命中。改成组合条件。
     "excessive-data-exposure": [
-        "select *", "所有列", "全部字段", "敏感字段", "过度返回",
+        ("select *", "返回"), ("select *", "暴露"), ("select *", "客户端"),
+        ("select *", "字段"), ("select *", "泄露"),
+        "所有列", "全部字段", "敏感字段", "过度返回",
         "返回全部", "不应返回",
         # 复核 020 时补的：返回体里带了服务器绝对路径
         "绝对路径",
@@ -296,18 +302,37 @@ def score_items(
     summaries: list[dict[str, str]],
     expected: dict[str, Any],
 ) -> dict[str, Any]:
-    """就地标记 items 的 hit，返回命中明细与条目级统计。"""
+    """就地标记 items 的 hit / duplicate_of，返回命中明细与条目级统计。
+
+    匹配是**一对一**的：一条标注最多认领一条模型输出，一条输出也只能被一条标注认领。
+
+    早先的实现是「一条标注命中，把所有能匹配上的输出全标成命中」。
+    这会让同一处问题被 reviewer 和 security 各报一次时算两次 TP——
+    误报率被系统性低估，召回也被注水（`013` 里那条 SQL 拼接的幻觉，
+    就是靠举例时顺带写了 `select *` 蹭到了「数据过度暴露」的命中）。
+
+    认领不上的匹配不让它白算：单独记为「重复提出」（duplicate），
+    既不算命中，也不算误判——它确实指出了真问题，只是别处已经说过了。
+    """
     for it in items:
         it["hit"] = False
+        it.pop("duplicate_of", None)
 
     issues = expected.get("issues", [])
     hits: list[dict[str, Any]] = []
+    claimed: set[int] = set()
     for issue in issues:
         matched_by = [
             idx for idx, it in enumerate(items) if match_issue(it["text"], issue)
         ]
+        # 标注在 expected.json 里的顺序就是优先级，先到先得
+        owner = next((i for i in matched_by if i not in claimed), None)
+        if owner is not None:
+            items[owner]["hit"] = True
+            claimed.add(owner)
         for idx in matched_by:
-            items[idx]["hit"] = True
+            if idx not in claimed:
+                items[idx]["duplicate_of"] = issue.get("type")
 
         # 兜底：条目里没写、但 summary 里提到了，也算发现（只算召回，不算条目命中）
         via_summary: list[str] = []
@@ -329,31 +354,45 @@ def score_items(
         )
 
     tp = sum(1 for it in items if it["hit"])
-    fp = len(items) - tp
+    dup = [it for it in items if not it["hit"] and it.get("duplicate_of")]
+    fp_items = [it for it in items if not it["hit"] and not it.get("duplicate_of")]
 
     # 按「缺陷声明 / 建议」分层：一条 nit 不算错误判断，不该进误报率
     defect = [it for it in items if not _is_advice(it.get("severity", ""))]
     advice = [it for it in items if _is_advice(it.get("severity", ""))]
-    d_tp = sum(1 for it in defect if it["hit"])
+
+    def _count(group: list[dict[str, Any]], kind: str) -> int:
+        if kind == "hit":
+            return sum(1 for it in group if it["hit"])
+        if kind == "dup":
+            return sum(1 for it in group if not it["hit"] and it.get("duplicate_of"))
+        return sum(1 for it in group if not it["hit"] and not it.get("duplicate_of"))
 
     # 按 agent 拆条目，用来回答「哪个角色最爱凑数」
     agent_stats: dict[str, dict[str, int]] = {}
     for it in items:
-        slot = agent_stats.setdefault(it["agent"], {"total": 0, "tp": 0})
+        slot = agent_stats.setdefault(it["agent"], {"total": 0, "tp": 0, "dup": 0})
         slot["total"] += 1
         if it["hit"]:
             slot["tp"] += 1
+        elif it.get("duplicate_of"):
+            slot["dup"] += 1
 
     return {
         "hits": hits,
         "items_tp": tp,
-        "items_fp": fp,
+        "items_fp": len(fp_items),
+        "items_dup": len(dup),
+        "fp_items": fp_items,
+        "dup_items": dup,
         "by_agent": agent_stats,
         "items_defect_total": len(defect),
-        "items_defect_tp": d_tp,
-        "items_defect_fp": len(defect) - d_tp,
+        "items_defect_tp": _count(defect, "hit"),
+        "items_defect_fp": _count(defect, "fp"),
+        "items_defect_dup": _count(defect, "dup"),
         "items_advice_total": len(advice),
-        "items_advice_fp": sum(1 for it in advice if not it["hit"]),
+        "items_advice_fp": _count(advice, "fp"),
+        "items_advice_dup": _count(advice, "dup"),
     }
 
 
@@ -433,13 +472,17 @@ async def run_case(
         "items_total": len(items),
         "items_tp": scored["items_tp"],
         "items_fp": scored["items_fp"],
+        "items_dup": scored["items_dup"],
         "items_defect_total": scored["items_defect_total"],
         "items_defect_tp": scored["items_defect_tp"],
         "items_defect_fp": scored["items_defect_fp"],
+        "items_defect_dup": scored["items_defect_dup"],
         "items_advice_total": scored["items_advice_total"],
         "items_advice_fp": scored["items_advice_fp"],
+        "items_advice_dup": scored["items_advice_dup"],
         "hits": scored["hits"],
-        "fp_items": [it for it in items if not it["hit"]],
+        "fp_items": scored["fp_items"],
+        "dup_items": scored["dup_items"],
         "by_agent": scored["by_agent"],
         "reports": len(reports),
         # 下面两项是为了 --rematch：有了原始条目就能离线重算，不必再调模型
@@ -469,13 +512,17 @@ def apply_score(result: dict[str, Any], expected: dict[str, Any]) -> None:
             "items_total": len(items),
             "items_tp": scored["items_tp"],
             "items_fp": scored["items_fp"],
+            "items_dup": scored["items_dup"],
             "items_defect_total": scored["items_defect_total"],
             "items_defect_tp": scored["items_defect_tp"],
             "items_defect_fp": scored["items_defect_fp"],
+            "items_defect_dup": scored["items_defect_dup"],
             "items_advice_total": scored["items_advice_total"],
             "items_advice_fp": scored["items_advice_fp"],
+            "items_advice_dup": scored["items_advice_dup"],
             "hits": scored["hits"],
-            "fp_items": [it for it in items if not it["hit"]],
+            "fp_items": scored["fp_items"],
+            "dup_items": scored["dup_items"],
             "by_agent": scored["by_agent"],
         }
     )
@@ -490,11 +537,15 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     items = sum(r["items_total"] for r in results)
     tp = sum(r["items_tp"] for r in results)
     fp = sum(r["items_fp"] for r in results)
+    dup = sum(r.get("items_dup", 0) for r in results)
     # 分层：只对「声称有缺陷」的条目算误报率；nit/suggestion 归建议，单独统计
     d_total = sum(r.get("items_defect_total", 0) for r in results)
     d_tp = sum(r.get("items_defect_tp", 0) for r in results)
+    d_fp = sum(r.get("items_defect_fp", 0) for r in results)
+    d_dup = sum(r.get("items_defect_dup", 0) for r in results)
     a_total = sum(r.get("items_advice_total", 0) for r in results)
     a_fp = sum(r.get("items_advice_fp", 0) for r in results)
+    a_dup = sum(r.get("items_advice_dup", 0) for r in results)
     ok_cases = sum(1 for r in results if r["expected_total"] and r["expected_hit"] == r["expected_total"])
     scored = [r for r in results if r["expected_total"]]
     elapsed = [r["elapsed"] for r in results if not r["error"]]
@@ -511,9 +562,10 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     by_agent: dict[str, dict[str, int]] = {}
     for r in results:
         for agent, stat in r["by_agent"].items():
-            slot = by_agent.setdefault(agent, {"total": 0, "tp": 0})
+            slot = by_agent.setdefault(agent, {"total": 0, "tp": 0, "dup": 0})
             slot["total"] += stat["total"]
             slot["tp"] += stat["tp"]
+            slot["dup"] += stat.get("dup", 0)
 
     return {
         "cases": len(results),
@@ -527,14 +579,19 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
         "items_total": items,
         "items_tp": tp,
         "items_fp": fp,
-        "fp_rate": fp / items if items else 0.0,
+        "items_dup": dup,
+        # 分母只算「有效条目」：重复提出既不是命中，也不是误判，不该进分母
+        "fp_rate": fp / (items - dup) if items - dup else 0.0,
+        "dup_rate": dup / items if items else 0.0,
         "items_defect_total": d_total,
         "items_defect_tp": d_tp,
-        "items_defect_fp": d_total - d_tp,
-        "fp_rate_defect": (d_total - d_tp) / d_total if d_total else 0.0,
+        "items_defect_fp": d_fp,
+        "items_defect_dup": d_dup,
+        "fp_rate_defect": d_fp / (d_total - d_dup) if d_total - d_dup else 0.0,
         "items_advice_total": a_total,
         "items_advice_fp": a_fp,
-        "fp_rate_advice": a_fp / a_total if a_total else 0.0,
+        "items_advice_dup": a_dup,
+        "fp_rate_advice": a_fp / (a_total - a_dup) if a_total - a_dup else 0.0,
         "avg_elapsed": sum(elapsed) / len(elapsed) if elapsed else 0.0,
         "failed_cases": sum(1 for r in results if r["error"]),
         "agent_errors": sum(len(r["agent_errors"]) for r in results),
@@ -571,7 +628,10 @@ def render_markdown(
     )
     add(f"| 样本全中 | {summary['cases_all_hit']}/{summary['scored_cases']}（{_pct(summary['case_recall'])}） |")
     add(f"| 问题条目数 | {summary['items_total']} |")
-    add(f"| 命中条目 / 未匹配条目 | {summary['items_tp']} / {summary['items_fp']} |")
+    add(
+        f"| 命中 / 未匹配 / 重复提出 | {summary['items_tp']} / "
+        f"{summary['items_fp']} / {summary['items_dup']} |"
+    )
     add(
         f"| 全条目未匹配率（旧口径，误报率上界） | {_pct(summary['fp_rate'])} |"
     )
@@ -581,20 +641,26 @@ def render_markdown(
     add("nit / suggestion 只是「建议」，不是「声称这里有问题」，混在一起算会虚高误报。")
     add("所以下面把条目拆成两层，**误报率只看缺陷层**。")
     add("")
-    add("| 层 | 条目 | 命中 | 未匹配 | 误报率 |")
-    add("|---|---|---|---|---|")
+    add("「重复提出」指同一处问题被两个 agent 各报一次。它确实指出了真问题，")
+    add("但不是新的发现，也不算误判，所以单列，不进误报率的分母。")
+    add("")
+    add("| 层 | 条目 | 命中 | 未匹配 | 重复 | 误报率 |")
+    add("|---|---|---|---|---|---|")
     add(
         f"| 缺陷声明（critical/high/major/medium/low） | {summary['items_defect_total']} | "
         f"{summary['items_defect_tp']} | {summary['items_defect_fp']} | "
+        f"{summary['items_defect_dup']} | "
         f"**{_pct(summary['fp_rate_defect'])}** |"
     )
     add(
         f"| 建议（nit/suggestion） | {summary['items_advice_total']} | "
-        f"{summary['items_advice_total'] - summary['items_advice_fp']} | "
-        f"{summary['items_advice_fp']} | {_pct(summary['fp_rate_advice'])} |"
+        f"{summary['items_advice_total'] - summary['items_advice_fp'] - summary['items_advice_dup']} | "
+        f"{summary['items_advice_fp']} | {summary['items_advice_dup']} | "
+        f"{_pct(summary['fp_rate_advice'])} |"
     )
-    add(f"| 平均耗时 | {summary['avg_elapsed']:.1f} 秒 |")
-    add(f"| 整份失败 / 单 agent 出错 | {summary['failed_cases']} / {summary['agent_errors']} |")
+    add("")
+    add(f"- 平均耗时：{summary['avg_elapsed']:.1f} 秒 / 份")
+    add(f"- 整份失败 / 单 agent 出错：{summary['failed_cases']} / {summary['agent_errors']}")
     add("")
 
     add("## 按问题类型")
@@ -612,26 +678,32 @@ def render_markdown(
 
     add("## 按 agent（哪个角色最爱凑数）")
     add("")
-    add("| 角色 | 条目 | 命中 | 未匹配 |")
-    add("|---|---|---|---|")
+    add("同一处问题被两个角色都报出来时，只有一条算独立发现，另一条记重复。")
+    add("所以「对上标注」会比「命中」大——它统计的是这个角色有没有说到点子上，")
+    add("而不是谁抢到了那条标注。")
+    add("")
+    add("| 角色 | 条目 | 对上标注 | 其中重复 | 未匹配 |")
+    add("|---|---|---|---|---|")
     for agent, stat in sorted(
         summary["by_agent"].items(), key=lambda kv: -(kv[1]["total"] - kv[1]["tp"])
     ):
+        dup = stat.get("dup", 0)
         add(
-            f"| {KIND_LABEL.get(agent, agent)} | {stat['total']} | {stat['tp']} | "
-            f"{stat['total'] - stat['tp']} |"
+            f"| {KIND_LABEL.get(agent, agent)} | {stat['total']} | {stat['tp'] + dup} | "
+            f"{dup} | {stat['total'] - stat['tp'] - dup} |"
         )
     add("")
 
     add("## 逐样本")
     add("")
-    add("| 样本 | 标题 | 期望 | 命中 | 条目 | 未匹配 | 耗时 | 备注 |")
-    add("|---|---|---|---|---|---|---|---|")
+    add("| 样本 | 标题 | 期望 | 命中 | 条目 | 未匹配 | 重复 | 耗时 | 备注 |")
+    add("|---|---|---|---|---|---|---|---|---|")
     for r in results:
         note = r["error"] or (f"agent 出错：{','.join(r['agent_errors'])}" if r["agent_errors"] else "")
         add(
             f"| {r['id']} | {r['title']} | {r['expected_total']} | {r['expected_hit']} | "
-            f"{r['items_total']} | {r['items_fp']} | {r['elapsed']:.1f}s | {note} |"
+            f"{r['items_total']} | {r['items_fp']} | {r.get('items_dup', 0)} | "
+            f"{r['elapsed']:.1f}s | {note} |"
         )
     add("")
 
@@ -748,8 +820,8 @@ async def main_async(args: argparse.Namespace) -> int:
             f"重算完成：命中率 {_pct(summary['recall'])}"
             f"（{summary['expected_hit']}/{summary['expected_total']}）"
             f" | 缺陷条目误报率 {_pct(summary['fp_rate_defect'])}"
-            f"（{summary['items_defect_fp']}/{summary['items_defect_total']}）"
-            f" | 建议条目 {summary['items_advice_total']} 条"
+            f"（{summary['items_defect_fp']}/{summary['items_defect_total'] - summary['items_defect_dup']}）"
+            f" | 重复提出 {summary['items_dup']} 条"
         )
         print(f"报告：{md_path}")
         print(f"机读：{json_path}")
@@ -806,7 +878,8 @@ async def main_async(args: argparse.Namespace) -> int:
         print(
             f"[{status}] {index:2d}/{len(cases)} {case_id} {result['title'][:14]:<16}"
             f" 命中 {result['expected_hit']}/{result['expected_total']}"
-            f"  条目 {result['items_total']:2d}（未匹配 {result['items_fp']:2d}）"
+            f"  条目 {result['items_total']:2d}（未匹配 {result['items_fp']:2d}"
+            f" / 重复 {result.get('items_dup', 0):2d}）"
             f"  {result['elapsed']:5.1f}s"
             + (f"  {result['error']}" if result["error"] else ""),
             flush=True,
@@ -822,8 +895,8 @@ async def main_async(args: argparse.Namespace) -> int:
         f"命中率 {_pct(summary['recall'])}（{summary['expected_hit']}/{summary['expected_total']}）"
         f" | 样本全中 {summary['cases_all_hit']}/{summary['scored_cases']}"
         f" | 缺陷条目误报率 {_pct(summary['fp_rate_defect'])}"
-        f"（{summary['items_defect_fp']}/{summary['items_defect_total']}）"
-        f" | 建议条目 {summary['items_advice_total']} 条"
+        f"（{summary['items_defect_fp']}/{summary['items_defect_total'] - summary['items_defect_dup']}）"
+        f" | 重复提出 {summary['items_dup']} 条"
         f" | 平均 {summary['avg_elapsed']:.1f}s"
     )
 
