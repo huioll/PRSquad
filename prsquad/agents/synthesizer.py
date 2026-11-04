@@ -15,7 +15,10 @@ _HEADER = "🤖 **PRSquad 代码审查** —— 多智能体自动审查结果\n
 _DISPLAY = {"reviewer": "代码质量", "security": "安全", "tests": "测试", "docs": "文档"}
 
 # 渲染时的固定顺序：先看结论性的（质量、安全），再看补全性的（测试、文档）。
-# 不加这个的话，顺序取决于四个 agent 谁先返回，同一份代码两次审查的段落次序会不一样。
+# 不加这个的话，渲染顺序就跟着 state 里 reports 数组的原始次序走。实测 langgraph
+# 1.2.19 下这个次序是 docs → reviewer → security → tests（跨进程稳定，且与完成
+# 时间无关），等于报告以「文档」开头，读起来别扭。
+# 注意这是渲染层单方面的保证：图本身不做重排，接口返回的 reports 数组仍是原序。
 _ORDER = ("reviewer", "security", "tests", "docs")
 
 

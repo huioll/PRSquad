@@ -21,7 +21,7 @@
 | **接国产模型** | `AsyncOpenAI()` 没传 `base_url`，DeepSeek / 通义 / Moonshot 都调不通 | 新增 `PRSQUAD_OPENAI_BASE_URL` 配置项，填兼容端点即可切换 |
 | **单页演示界面** | 只能开 `/docs` 手工构造 JSON，没法演示 | `/` 返回一个手写页面：左边贴 diff，右边出渲染好的报告，零前端依赖 |
 | **全量中文** | 注释、提示词、输出全英文 | 注释与系统提示词改中文；`_detect_role()` 的关键词匹配改双语，否则中文提示词下角色识别会失效 |
-| **输出章节定序** | 四个 agent 并发返回，汇总顺序随机，同一份 diff 两次跑出的报告段落顺序不一样 | `synthesizer` 按固定顺序（reviewer → security → tests → docs）拼接 |
+| **输出章节定序** | 四个 agent 并发返回，汇聚出的数组次序由框架内部决定（实测为 docs → reviewer → security → tests），不是「先结论后补充」的阅读顺序 | `synthesizer` 按 `_ORDER` 重排为 reviewer → security → tests → docs 再渲染 |
 | **离线单测** | 无测试 | 补 6 个测试，用 `StubLLM` 全程离线，不读密钥、不发请求，1 秒内跑完 |
 | **评估集** | 无任何效果度量，改提示词全靠感觉 | 自建 20 份样本 + 62 条标注 + 跑批脚本，见下文「评估」 |
 
