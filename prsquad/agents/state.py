@@ -22,7 +22,10 @@ class GraphState(TypedDict, total=False):
     pr_title: str   #拉取请求标题
     # 用 `add` 标注后，LangGraph 合并不是覆盖而是拼接：
     # 四个节点同时返回 {"reports": [...]} 时，四份结果都会保留下来。
-    # 如果去掉 Annotated，最终只剩最后完成的那一份。
+    # 去掉 Annotated 不是「只剩一份」，而是直接抛 InvalidUpdateError
+    # （At key 'reports': Can receive only one value per step）。
+    # 因为四个节点在同一轮里并行写这个字段，框架不知道该保留哪一个，宁可报错也不替你猜。
+    # 只有串行写同一字段时才是「后写覆盖先写」——实测两个节点串行会静默剩下最后一个。
     reports: Annotated[list[AgentReport], add]
     # 由最后的汇总节点（synthesizer）填入的 Markdown 文本。
     markdown: str   #Markdown文本
