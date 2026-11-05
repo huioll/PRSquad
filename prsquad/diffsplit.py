@@ -24,19 +24,20 @@ def split_files(diff: str) -> list[str]:
     解析失败（比如不是标准 unified diff）时，整份 diff 当作一个块返回，
     不抛异常——调用方不需要为格式问题写兜底。
     """
-    if not diff.strip():#strip删除开始结尾的空白字符
+    if not diff.strip():
         return []
 
-    blocks: list[list[str]] = []#用来存放所有文件
-    current: list[str] = []#用来收集当前文件的行
-    for line in diff.splitlines(keepends=True): #把diff按行拆开
-        if line.startswith("diff --git ") :#判断是否是文件头
-            if current is not None:#如果当前块不为空
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    for line in diff.splitlines(keepends=True):
+        if line.startswith("diff --git "):
+            # 只收已经有内容的 current，否则开头会多出一个空块
+            if current:
                 blocks.append(current)
-            current = [line]  #清空current
+            current = [line]
         else:
             current.append(line)
-    if current:     #循环结束，最后一个文件还在current 放入blocks
+    if current:
         blocks.append(current)
 
     # 没有 diff --git 头（比如手写的补丁片段），整体算一块
@@ -50,28 +51,28 @@ def pack(blocks: list[str], budget: int = DEFAULT_BUDGET) -> list[str]:
       - 不切碎文件块，保持一个文件的改动完整地被同一个 agent 看到
       - 单个文件块本身超过 budget 时，独占一批并截断，同时插入提示语
     """
-    batches: list[str] = []#用来存放所有批次
-    buf: list[str] = []#用来收集当前批次的行
-    size = 0#用来记录当前批次的字符数
+    batches: list[str] = []
+    buf: list[str] = []
+    size = 0
 
-    for block in blocks:#遍历所有文件块
+    for block in blocks:
         if len(block) > budget:
             # 先把攒着的批次落盘，再让这个超大文件独占一批
-            if buf:#如果当前批次不为空
+            if buf:
                 batches.append("".join(buf))
                 buf, size = [], 0
-            batches.append(block[:budget] + _TRUNCATED_MARK) #block[:budget]截取前面的字符，_TRUNCATED_MARK提示语
+            batches.append(block[:budget] + _TRUNCATED_MARK)
             continue
 
-        if buf and size + len(block) > budget:#如果当前批次不为空且加上当前文件块超过预算
+        if buf and size + len(block) > budget:
             batches.append("".join(buf))
             buf, size = [], 0
 
-        buf.append(block)#把当前文件块加入当前批次
-        size += len(block)#更新当前批次的字符数
+        buf.append(block)
+        size += len(block)
 
-    if buf:#如果当前批次不为空
-        batches.append("".join(buf))#把当前批次加入批次列表
+    if buf:
+        batches.append("".join(buf))
     return batches
 
 
