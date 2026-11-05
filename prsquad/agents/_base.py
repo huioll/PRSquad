@@ -117,6 +117,7 @@ def _merge_payloads(payloads: list[dict[str, Any]]) -> dict[str, Any]:
             elif key not in merged:
                 merged[key] = value
 
+    # 逐批收集 summary，空字符串丢掉；多批时在末尾注明分了几批
     summaries = [str(p.get("summary") or "").strip() for p in payloads]
     summaries = [s for s in summaries if s]
     if not summaries:
@@ -130,7 +131,19 @@ def _merge_payloads(payloads: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _safe_json(raw: str) -> dict[str, Any]:
-    """容错解析：模型不一定老实返回纯 JSON，可能带代码围栏或一段解释。"""
+    """把模型回复解析成 dict，解析不了就降级成 {"summary": 原文}。
+
+    只保证「返回的一定是 dict、不抛异常」，不保证内容是对的：
+
+    - 解析成功但顶层不是 dict（列表 / 字符串 / 数字 / null）→ 塞进 summary
+    - 解析失败（含带代码围栏、夹了一段解释文字）→ 原文前 500 字塞进 summary
+    - 解析成功、是 dict、但字段名不对（返回 risks 而没有 findings）→ 原样放行，
+      渲染层不认识这个 key，会静默不显示，既不报错也没有日志
+
+    注意这里**不剥离 Markdown 代码围栏**：靠调用方用 response_format=json_object
+    约束模型返回纯 JSON。换用不支持该参数的端点时要补上剥离逻辑，否则带围栏的
+    回复会直接走 except，整段原文被当成 summary，所有条目丢失。
+    """
     try:
         parsed = json.loads(raw)
         return parsed if isinstance(parsed, dict) else {"summary": str(parsed)}
