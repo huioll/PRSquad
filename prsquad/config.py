@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings):#读取 .env 文件里带 PRSQUAD_ 前缀的变量，和代码里写的默认值合并，生成一个配置对象。
     """运行时配置。
 
     环境变量统一加 ``PRSQUAD_`` 前缀，例如 ``PRSQUAD_GITHUB_TOKEN``。
@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     llm_timeout_seconds: float = 30.0
 
+    # diff 单批预算（字符）。超过就按文件切分后分批审，而不是把后半段丢掉。
+    # 调大意味着少分批、每次看更多内容；调小意味着分批更细、调用次数更多。
+    diff_budget_chars: int = 8_000
+
     # GitHub
     github_token: str | None = None
     github_api_base: str = "https://api.github.com"
@@ -51,5 +55,5 @@ def get_settings() -> Settings:
     """单例：整个进程只读一次环境变量。"""
     global _settings
     if _settings is None:
-        _settings = Settings()
+        _settings = Settings()#创建实例 读取env 生成配置实例
     return _settings

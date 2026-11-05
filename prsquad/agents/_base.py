@@ -13,6 +13,7 @@ import json
 import logging
 from typing import Any, Awaitable, Callable
 
+from ..config import get_settings
 from ..diffsplit import split_diff
 from ..llm import LLMClient
 from ..schemas import AgentReport
@@ -35,7 +36,8 @@ def make_agent_node(
     """
 
     async def node(state: GraphState) -> dict[str, Any]:
-        batches = split_diff(state.get("diff") or "") or [""]
+        budget = get_settings().diff_budget_chars
+        batches = split_diff(state.get("diff") or "", budget=budget) or [""]
         total = len(batches)
         payloads: list[dict[str, Any]] = []
         errors: list[str] = []
