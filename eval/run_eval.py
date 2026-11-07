@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
 import os
 import re
 import sys
@@ -283,9 +284,7 @@ def match_issue(text: str, issue: dict[str, Any]) -> bool:
     if not aliases or not any(_alias_hit(a, text) for a in aliases):
         return False
     expected_file = issue.get("file")
-    if expected_file and _mentions_other_file(text, expected_file):
-        return False
-    return True
+    return not (expected_file and _mentions_other_file(text, expected_file))
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +420,7 @@ async def run_case(
             timeout=timeout,
         )
         reports = list(review.reports)
-    except (asyncio.TimeoutError, TimeoutError):
+    except TimeoutError:
         error = f"超时（>{timeout:.0f}s）"
     except Exception as exc:  # noqa: BLE001 —— 单份失败不影响整批
         error = f"{type(exc).__name__}: {exc}"
@@ -837,8 +836,6 @@ async def main_async(args: argparse.Namespace) -> int:
     from prsquad.main import _run_review
 
     # main.py 里开了 root INFO 日志，会把每次 HTTP 请求都打出来，压掉
-    import logging
-
     for noisy in ("httpx", "httpx2", "httpcore", "openai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 

@@ -82,7 +82,7 @@ class OpenAILLM:
     """
 
     def __init__(self, api_key: str, model: str, timeout: float, base_url: str | None = None):
-        from openai import AsyncOpenAI  # type: ignore  # noqa: PLC0415
+        from openai import AsyncOpenAI  # type: ignore
 
         # base_url 为 None 时 SDK 自动用官方端点，所以这里可以直接透传。
         self._client = AsyncOpenAI(api_key=api_key, timeout=timeout, base_url=base_url)
@@ -116,7 +116,7 @@ def _detect_role(system_prompt: str) -> str:
 
 def build_llm() -> LLMClient:
     """根据配置挑一个实现：默认走假模型，配置了 openai 就用真模型。"""
-    from .config import get_settings  # noqa: PLC0415  (避免模块加载时的循环导入)
+    from .config import get_settings  # 放在函数内：模块加载时导入会成环
 
     s = get_settings()
     if s.llm_provider == "openai":

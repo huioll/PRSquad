@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ..config import get_settings
 from ..diffsplit import split_diff
@@ -67,7 +68,9 @@ def make_agent_node(
             }
 
         merged = _merge_payloads(payloads)
-        summary = str(merged.get("summary") or f"{name} 没有给出总结")
+        # _merge_payloads 三个分支都保证写了非空 summary，所以这里不再兜底：
+        # 真缺了就直接 KeyError 炸出来，比静默显示「没有给出总结」更容易发现。
+        summary = str(merged["summary"])
         report = AgentReport(
             agent=name,  # type: ignore[arg-type]
             summary=summary,
